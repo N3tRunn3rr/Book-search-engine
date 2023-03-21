@@ -5,33 +5,44 @@ import SavedBooks from './pages/SavedBooks';
 import Navbar from './components/Navbar';
 
 import { ApolloProvider } from '@apollo/react-hooks';
-import ApolloClient from 'apollo-boost';
+import { ApolloClient } from "apollo-client";
+import { InMemoryCache } from "apollo-cache-inmemory";
+import { HttpLink } from "apollo-link-http";
+import { setContext } from 'apollo-link-context';
+
+const httpLink = HttpLink({
+  uri: '/graphql',
+});
+
+const authLink = setContext((_, { headers }) => {
+  const token = localStorage.getItem('id_token');
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : '',
+    },
+  };
+});
 
 const client = new ApolloClient({
-  request: operation => {
-    const token = localStorage.getItem('id_token');
-    operation.setContext({
-      headers: {
-        authorization: token ? `Bearer ${token}` : ''
-      }
-    });
-  },
-  uri: '/graphql'
+  link: authLink.concat(httpLink),
+  cache: new InMemoryCache(),
 });
 
 function App() {
   return (
+    <ApolloProvider client={client}>
     <Router>
       <>
         <Navbar />
         <Routes>
           <Route 
             path='/' 
-            element={<SearchBooks />} 
+            component={<SearchBooks />} 
           />
           <Route 
             path='/saved' 
-            element={<SavedBooks />} 
+            component={<SavedBooks />} 
           />
           <Route 
             path='*'
@@ -40,6 +51,7 @@ function App() {
         </Routes>
       </>
     </Router>
+    </ApolloProvider>
   );
 }
 
